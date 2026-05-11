@@ -11,13 +11,8 @@ export default function SeedPage() {
     try {
       const res = await fetch("/api/seed");
       const data = await res.json();
-      const raw = localStorage.getItem("dc_workout_sessions");
-      const existing = raw ? JSON.parse(raw) : [];
-      const dates = new Set(existing.map((s: { date: string }) => s.date));
-      const fresh = data.sessions.filter((s: { date: string }) => !dates.has(s.date));
-      const merged = [...existing, ...fresh];
-      localStorage.setItem("dc_workout_sessions", JSON.stringify(merged));
-      setCount(fresh.length);
+      localStorage.setItem("dc_workout_sessions", JSON.stringify(data.sessions));
+      setCount(data.sessions.length);
       setStatus("done");
     } catch {
       setStatus("error");
