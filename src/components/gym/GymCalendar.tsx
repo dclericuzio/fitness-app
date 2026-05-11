@@ -336,6 +336,18 @@ function TemplatePicker({
   onNewTemplate: () => void;
   onClose: () => void;
 }) {
+  const [preview, setPreview] = useState<WorkoutTemplate | null>(null);
+
+  if (preview) {
+    return (
+      <TemplatePreview
+        template={preview}
+        onSelect={() => onPick(preview)}
+        onBack={() => setPreview(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -346,10 +358,10 @@ function TemplatePicker({
       </div>
 
       {custom.length > 0 && (
-        <TemplateSection title="My Workouts" templates={custom} onPick={onPick} />
+        <TemplateSection title="My Workouts" templates={custom} onTap={setPreview} />
       )}
-      <TemplateSection title="Phase 1 -- PPLPPL" templates={phase1} onPick={onPick} />
-      <TemplateSection title="Phase 2 -- PPLRULP" templates={phase2} onPick={onPick} />
+      <TemplateSection title="Phase 1 -- PPLPPL" templates={phase1} onTap={setPreview} />
+      <TemplateSection title="Phase 2 -- PPLRULP" templates={phase2} onTap={setPreview} />
 
       <button
         onClick={onNewTemplate}
@@ -361,14 +373,82 @@ function TemplatePicker({
   );
 }
 
+function TemplatePreview({
+  template,
+  onSelect,
+  onBack,
+}: {
+  template: WorkoutTemplate;
+  onSelect: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted active:bg-muted/10"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold">
+              {template.emoji} {template.name}
+            </span>
+            {template.label && (
+              <span className="rounded-md bg-muted/10 px-2 py-0.5 text-[10px] font-medium text-muted">
+                {template.label}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted">
+            {template.exercises.length} exercises
+            {template.source !== "custom" && ` · ${template.source === "phase1" ? "Phase 1" : "Phase 2"}`}
+          </div>
+        </div>
+      </div>
+
+      {template.note && (
+        <div className="rounded-lg bg-orange/10 px-3 py-2 text-xs text-orange">
+          {template.note}
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        {template.exercises.map((ex, i) => (
+          <div
+            key={ex.id}
+            className="flex items-center justify-between rounded-lg bg-muted/5 px-3 py-2.5"
+          >
+            <span className="text-sm">{ex.name}</span>
+            <span className="text-xs text-muted">
+              {ex.sets}x{ex.repsMin}-{ex.repsMax}
+              {(ex.rirMin > 0 || ex.rirMax > 0) && ` RIR ${ex.rirMin}-${ex.rirMax}`}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onSelect}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-semibold text-white transition-all active:scale-[0.98]"
+      >
+        <Check size={16} />
+        Select This Workout
+      </button>
+    </div>
+  );
+}
+
 function TemplateSection({
   title,
   templates,
-  onPick,
+  onTap,
 }: {
   title: string;
   templates: WorkoutTemplate[];
-  onPick: (t: WorkoutTemplate) => void;
+  onTap: (t: WorkoutTemplate) => void;
 }) {
   return (
     <div>
@@ -379,7 +459,7 @@ function TemplateSection({
         {templates.map((t) => (
           <button
             key={t.id}
-            onClick={() => onPick(t)}
+            onClick={() => onTap(t)}
             className={cn(
               "rounded-lg border-l-4 bg-muted/5 p-3 text-left transition-all active:scale-[0.97]",
               groupBorder[t.muscleGroup]
