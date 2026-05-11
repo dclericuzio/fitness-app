@@ -1,5 +1,5 @@
-import ProgramView from "@/components/gym/ProgramView";
+import GymCalendar from "@/components/gym/GymCalendar";
 
 export default function GymPage() {
-  return <ProgramView />;
+  return <GymCalendar />;
 }

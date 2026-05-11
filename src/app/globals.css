@@ -1,20 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card: #141414;
-  --card-border: #1e1e1e;
-  --muted: #888888;
-  --accent-push: #f97316;
-  --accent-pull: #22c55e;
-  --accent-legs: #a855f7;
-  --accent-upper: #8b5cf6;
-  --accent-lower: #14b8a6;
-  --accent-rest: #6b7280;
-  --accent-primary: #3b82f6;
-  --accent-success: #22c55e;
-  --accent-danger: #ef4444;
+  --background: #F8F9FA;
+  --foreground: #111318;
+  --card: #FFFFFF;
+  --card-border: #E5E7EB;
+  --muted: #6B7280;
+  --accent-push: #F97316;
+  --accent-pull: #3ECF8E;
+  --accent-legs: #A78BFA;
+  --accent-upper: #60A5FA;
+  --accent-lower: #2DD4BF;
+  --accent-rest: #6B7280;
+  --accent-primary: #3ECF8E;
+  --accent-success: #3ECF8E;
+  --accent-danger: #EF4444;
+  --accent-orange: #F97316;
+}
+
+.dark {
+  --background: #111318;
+  --foreground: #EDEDED;
+  --card: #1C1C1C;
+  --card-border: #2E2E2E;
+  --muted: #8B8B8B;
 }
 
 @theme inline {
@@ -32,6 +41,7 @@
   --color-primary: var(--accent-primary);
   --color-success: var(--accent-success);
   --color-danger: var(--accent-danger);
+  --color-orange: var(--accent-orange);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -57,17 +67,15 @@ input[type="number"] {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
 
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
-  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(62, 207, 142, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(62, 207, 142, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(62, 207, 142, 0); }
 }
-
 .animate-pulse-ring {
   animation: pulse-ring 1.5s infinite;
 }

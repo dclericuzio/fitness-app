@@ -34,7 +34,7 @@ export default function RestTimerPill() {
         {running && (
           <button
             onClick={() => addTime(30)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 transition-colors active:bg-white/20"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/20 transition-colors active:bg-muted/30"
             title="Add 30s"
           >
             <Plus size={14} />
@@ -42,7 +42,7 @@ export default function RestTimerPill() {
         )}
         <button
           onClick={stop}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 transition-colors active:bg-white/20"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/20 transition-colors active:bg-muted/30"
         >
           <X size={14} />
         </button>

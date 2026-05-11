@@ -13,6 +13,8 @@ export interface Exercise {
   category: ExerciseCategory;
 }
 
+export type TemplateSource = "phase1" | "phase2" | "custom";
+
 export interface WorkoutTemplate {
   id: string;
   name: string;
@@ -20,19 +22,9 @@ export interface WorkoutTemplate {
   emoji: string;
   muscleGroup: MuscleGroup;
   exercises: Exercise[];
-}
-
-export interface ProgramDay {
-  day: number;
-  workoutId: string; // references WorkoutTemplate.id
-}
-
-export interface Program {
-  id: string;
-  name: string;
-  subtitle: string;
-  days: ProgramDay[];
-  startDate: string; // ISO date
+  source: TemplateSource;
+  isBuiltIn: boolean;
+  note?: string;
 }
 
 export interface SetLog {
@@ -52,15 +44,12 @@ export interface ExerciseLog {
 
 export interface WorkoutSession {
   id: string;
-  programId: string;
-  day: number;
-  workoutId: string;
-  date: string; // ISO date
-  startedAt: string | null; // ISO datetime
-  finishedAt: string | null; // ISO datetime
+  date: string;
+  workoutTemplateId: string;
+  startedAt: string | null;
+  finishedAt: string | null;
   exercises: ExerciseLog[];
   notes: string;
-  extras: string[];
   completed: boolean;
 }
 
@@ -68,7 +57,7 @@ export interface RunActivity {
   id: string;
   stravaId: number | null;
   name: string;
-  date: string; // ISO datetime
+  date: string;
   distanceMeters: number;
   movingTimeSeconds: number;
   elapsedTimeSeconds: number;
@@ -89,18 +78,20 @@ export interface Supplement {
 }
 
 export interface SupplementLog {
-  date: string; // ISO date YYYY-MM-DD
+  date: string;
   supplementId: string;
   taken: boolean;
-  checkedAt: string | null; // ISO datetime
+  checkedAt: string | null;
 }
 
 export interface RestTimerDefaults {
-  compound_heavy: number; // seconds
+  compound_heavy: number;
   compound_medium: number;
   isolation: number;
   high_rep: number;
 }
+
+export type ThemeMode = "dark" | "light" | "system";
 
 export interface UserSettings {
   restTimerDefaults: RestTimerDefaults;
@@ -109,4 +100,5 @@ export interface UserSettings {
   stravaExpiresAt: number | null;
   stravaAthleteId: number | null;
   supplements: Supplement[];
+  theme: ThemeMode;
 }

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Plus, TrendingUp, TrendingDown, Minus, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  createOrGetSession,
   updateSession,
   getLastSessionForExercise,
   getSettings,
@@ -13,31 +12,26 @@ import { WorkoutTemplate, SetLog, WorkoutSession } from "@/lib/types";
 import { useTimer } from "@/lib/timer-context";
 
 interface ExerciseLoggerProps {
-  programId: string;
-  dayNumber: number;
-  workoutId: string;
-  dateStr: string;
+  session: WorkoutSession;
   workout: WorkoutTemplate;
+  onUpdate: (s: WorkoutSession) => void;
 }
 
 export default function ExerciseLogger({
-  programId,
-  dayNumber,
-  workoutId,
-  dateStr,
+  session: initialSession,
   workout,
+  onUpdate,
 }: ExerciseLoggerProps) {
-  const [session, setSession] = useState<WorkoutSession>(() =>
-    createOrGetSession(programId, dayNumber, workoutId, dateStr)
-  );
+  const [session, setSession] = useState<WorkoutSession>(initialSession);
   const timer = useTimer();
 
   const persist = useCallback(
     (updated: WorkoutSession) => {
       setSession(updated);
       updateSession(updated.id, () => updated);
+      onUpdate(updated);
     },
-    []
+    [onUpdate]
   );
 
   const handleSetChange = useCallback(
@@ -51,19 +45,18 @@ export default function ExerciseLogger({
           })};
         })};
         updateSession(updated.id, () => updated);
+        onUpdate(updated);
         return updated;
       });
     },
-    []
+    [onUpdate]
   );
 
   const handleSetComplete = useCallback(
     (exIdx: number, setIdx: number) => {
       setSession((prev) => {
-        const exercise = prev.exercises[exIdx];
-        const set = exercise.sets[setIdx];
+        const set = prev.exercises[exIdx].sets[setIdx];
         const newCompleted = !set.completed;
-
         const updated = { ...prev, exercises: prev.exercises.map((ex, ei) => {
           if (ei !== exIdx) return ex;
           return { ...ex, sets: ex.sets.map((s, si) => {
@@ -71,9 +64,8 @@ export default function ExerciseLogger({
             return { ...s, completed: newCompleted };
           })};
         })};
-
         updateSession(updated.id, () => updated);
-
+        onUpdate(updated);
         if (newCompleted) {
           const template = workout.exercises[exIdx];
           if (template) {
@@ -82,11 +74,10 @@ export default function ExerciseLogger({
             timer.start(restTime);
           }
         }
-
         return updated;
       });
     },
-    [workout.exercises, timer]
+    [workout.exercises, timer, onUpdate]
   );
 
   const handleAddSet = useCallback(
@@ -129,7 +120,6 @@ export default function ExerciseLogger({
           exerciseLog.exerciseId,
           session.id
         );
-
         const currentVolume = exerciseLog.sets
           .filter((s) => s.completed && s.weightKg && s.actualReps)
           .reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.actualReps ?? 0), 0);
@@ -143,13 +133,13 @@ export default function ExerciseLogger({
           <div key={exerciseLog.exerciseId} className="space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold">
-                  {exerciseLog.exerciseName}
-                </span>
+                <span className="text-sm font-semibold">{exerciseLog.exerciseName}</span>
                 {template && (
                   <span className="ml-2 text-xs text-muted">
-                    {template.sets}×{template.repsMin}–{template.repsMax} RIR{" "}
-                    {template.rirMin}–{template.rirMax}
+                    {template.sets}x{template.repsMin}-{template.repsMax}
+                    {template.rirMin > 0 || template.rirMax > 0
+                      ? ` RIR ${template.rirMin}-${template.rirMax}`
+                      : ""}
                   </span>
                 )}
               </div>
@@ -166,15 +156,15 @@ export default function ExerciseLogger({
               )}
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-white/5">
+            <div className="overflow-hidden rounded-lg border border-card-border">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/5 text-muted">
+                  <tr className="border-b border-card-border bg-muted/10 text-muted">
                     <th className="w-10 py-2 text-center font-medium">Set</th>
                     <th className="py-2 text-center font-medium">Target</th>
                     <th className="py-2 text-center font-medium">kg</th>
                     <th className="py-2 text-center font-medium">Reps</th>
-                    <th className="w-12 py-2 text-center font-medium">✓</th>
+                    <th className="w-12 py-2 text-center font-medium">&#10003;</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,48 +174,34 @@ export default function ExerciseLogger({
                       <tr
                         key={set.setNumber}
                         className={cn(
-                          "border-b border-white/5 transition-colors",
+                          "border-b border-card-border transition-colors",
                           set.completed && "bg-success/5"
                         )}
                       >
-                        <td className="py-2 text-center font-mono text-muted">
-                          {set.setNumber}
-                        </td>
-                        <td className="py-2 text-center text-muted">
-                          {set.targetRepsMin}–{set.targetRepsMax}
-                        </td>
+                        <td className="py-2 text-center font-mono text-muted">{set.setNumber}</td>
+                        <td className="py-2 text-center text-muted">{set.targetRepsMin}-{set.targetRepsMax}</td>
                         <td className="py-2 text-center">
                           <input
                             type="number"
                             inputMode="decimal"
-                            placeholder={lastSet?.weightKg?.toString() ?? "—"}
+                            placeholder={lastSet?.weightKg?.toString() ?? "-"}
                             value={set.weightKg ?? ""}
                             onChange={(e) =>
-                              handleSetChange(
-                                exIdx,
-                                setIdx,
-                                "weightKg",
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )
+                              handleSetChange(exIdx, setIdx, "weightKg", e.target.value ? parseFloat(e.target.value) : null)
                             }
-                            className="w-14 rounded bg-white/10 px-2 py-1.5 text-center text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
+                            className="w-14 rounded bg-muted/10 px-2 py-1.5 text-center text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
                           />
                         </td>
                         <td className="py-2 text-center">
                           <input
                             type="number"
                             inputMode="numeric"
-                            placeholder={lastSet?.actualReps?.toString() ?? "—"}
+                            placeholder={lastSet?.actualReps?.toString() ?? "-"}
                             value={set.actualReps ?? ""}
                             onChange={(e) =>
-                              handleSetChange(
-                                exIdx,
-                                setIdx,
-                                "actualReps",
-                                e.target.value ? parseInt(e.target.value) : null
-                              )
+                              handleSetChange(exIdx, setIdx, "actualReps", e.target.value ? parseInt(e.target.value) : null)
                             }
-                            className="w-14 rounded bg-white/10 px-2 py-1.5 text-center text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
+                            className="w-14 rounded bg-muted/10 px-2 py-1.5 text-center text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
                           />
                         </td>
                         <td className="py-2 text-center">
@@ -233,21 +209,12 @@ export default function ExerciseLogger({
                             onClick={() => handleSetComplete(exIdx, setIdx)}
                             className={cn(
                               "mx-auto flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all",
-                              set.completed
-                                ? "border-success bg-success text-white"
-                                : "border-white/20"
+                              set.completed ? "border-success bg-success text-white" : "border-muted/30"
                             )}
                           >
                             {set.completed && (
                               <svg width="12" height="12" viewBox="0 0 12 12">
-                                <path
-                                  d="M2 6l3 3 5-5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  fill="none"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
+                                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             )}
                           </button>
@@ -283,11 +250,11 @@ export default function ExerciseLogger({
       <div className="pt-2">
         <label className="mb-1 block text-xs text-muted">Notes</label>
         <textarea
-          placeholder="How it felt, extra sets, abs, cardio…"
+          placeholder="How it felt, extra sets, abs, cardio..."
           value={session.notes}
           onChange={(e) => handleNotesChange(e.target.value)}
           rows={2}
-          className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted/50 outline-none focus:ring-1 focus:ring-primary"
+          className="w-full resize-none rounded-lg border border-card-border bg-muted/5 px-3 py-2 text-sm text-foreground placeholder:text-muted/50 outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
     </div>

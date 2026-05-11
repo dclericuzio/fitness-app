@@ -1,20 +1,24 @@
 import {
   WorkoutSession,
+  WorkoutTemplate,
   RunActivity,
   SupplementLog,
   UserSettings,
   Supplement,
   SetLog,
   ExerciseLog,
+  ThemeMode,
 } from "./types";
 import { generateId, toISODate } from "./utils";
-import { getWorkoutTemplate } from "./programs";
+import { getTemplateById } from "./programs";
 
 const KEYS = {
   sessions: "dc_workout_sessions",
+  customTemplates: "dc_custom_templates",
   runs: "dc_run_activities",
   supplementLogs: "dc_supplement_logs",
   settings: "dc_user_settings",
+  theme: "dc_theme",
 } as const;
 
 const DEFAULT_SUPPLEMENTS: Supplement[] = [
@@ -36,6 +40,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   stravaExpiresAt: null,
   stravaAthleteId: null,
   supplements: DEFAULT_SUPPLEMENTS,
+  theme: "dark",
 };
 
 function getItem<T>(key: string, fallback: T): T {
@@ -53,11 +58,12 @@ function setItem<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // storage full - silently fail
+    // storage full
   }
 }
 
-// --- Settings ---
+// ── Settings ────────────────────────────────────────────────────────
+
 export function getSettings(): UserSettings {
   return getItem(KEYS.settings, DEFAULT_SETTINGS);
 }
@@ -69,30 +75,57 @@ export function updateSettings(partial: Partial<UserSettings>): UserSettings {
   return updated;
 }
 
-// --- Workout Sessions ---
+export function getTheme(): ThemeMode {
+  if (typeof window === "undefined") return "dark";
+  return (localStorage.getItem(KEYS.theme) as ThemeMode) ?? "dark";
+}
+
+export function setTheme(mode: ThemeMode): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEYS.theme, mode);
+}
+
+// ── Custom Templates ────────────────────────────────────────────────
+
+export function getCustomTemplates(): WorkoutTemplate[] {
+  return getItem<WorkoutTemplate[]>(KEYS.customTemplates, []);
+}
+
+export function saveCustomTemplate(template: WorkoutTemplate): void {
+  const templates = getCustomTemplates();
+  const idx = templates.findIndex((t) => t.id === template.id);
+  if (idx >= 0) {
+    templates[idx] = template;
+  } else {
+    templates.push(template);
+  }
+  setItem(KEYS.customTemplates, templates);
+}
+
+export function deleteCustomTemplate(id: string): void {
+  const templates = getCustomTemplates().filter((t) => t.id !== id);
+  setItem(KEYS.customTemplates, templates);
+}
+
+// ── Workout Sessions (date-keyed) ───────────────────────────────────
+
 export function getSessions(): WorkoutSession[] {
   return getItem<WorkoutSession[]>(KEYS.sessions, []);
 }
 
-export function getSession(
-  programId: string,
-  day: number
-): WorkoutSession | undefined {
-  return getSessions().find(
-    (s) => s.programId === programId && s.day === day
-  );
+export function getSessionByDate(date: string): WorkoutSession | undefined {
+  return getSessions().find((s) => s.date === date);
 }
 
-export function createOrGetSession(
-  programId: string,
-  day: number,
-  workoutId: string,
-  date: string
+export function createSession(
+  date: string,
+  templateId: string
 ): WorkoutSession {
-  const existing = getSession(programId, day);
+  const existing = getSessionByDate(date);
   if (existing) return existing;
 
-  const template = getWorkoutTemplate(programId, workoutId);
+  const customs = getCustomTemplates();
+  const template = getTemplateById(templateId, customs);
   const exercises: ExerciseLog[] =
     template?.exercises.map((ex) => ({
       exerciseId: ex.id,
@@ -109,15 +142,12 @@ export function createOrGetSession(
 
   const session: WorkoutSession = {
     id: generateId(),
-    programId,
-    day,
-    workoutId,
     date,
+    workoutTemplateId: templateId,
     startedAt: null,
     finishedAt: null,
     exercises,
     notes: "",
-    extras: [],
     completed: false,
   };
 
@@ -139,13 +169,19 @@ export function updateSession(
   }
 }
 
-export function toggleSessionComplete(
-  programId: string,
-  day: number,
-  workoutId: string,
-  date: string
-): boolean {
-  const session = createOrGetSession(programId, day, workoutId, date);
+export function deleteSession(date: string): void {
+  const sessions = getSessions().filter((s) => s.date !== date);
+  setItem(KEYS.sessions, sessions);
+}
+
+export function assignWorkoutToDate(date: string, templateId: string): WorkoutSession {
+  deleteSession(date);
+  return createSession(date, templateId);
+}
+
+export function toggleSessionComplete(date: string): boolean {
+  const session = getSessionByDate(date);
+  if (!session) return false;
   const newCompleted = !session.completed;
   updateSession(session.id, (s) => ({
     ...s,
@@ -157,10 +193,10 @@ export function toggleSessionComplete(
 
 export function getLastSessionForExercise(
   exerciseId: string,
-  currentSessionId: string
+  excludeSessionId: string
 ): SetLog[] | null {
   const sessions = getSessions()
-    .filter((s) => s.completed && s.id !== currentSessionId)
+    .filter((s) => s.completed && s.id !== excludeSessionId)
     .sort(
       (a, b) =>
         new Date(b.finishedAt ?? b.date).getTime() -
@@ -178,7 +214,16 @@ export function getLastSessionForExercise(
   return null;
 }
 
-// --- Run Activities ---
+export function getSessionsForMonth(
+  year: number,
+  month: number
+): WorkoutSession[] {
+  const prefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+  return getSessions().filter((s) => s.date.startsWith(prefix));
+}
+
+// ── Run Activities ──────────────────────────────────────────────────
+
 export function getRunActivities(): RunActivity[] {
   return getItem<RunActivity[]>(KEYS.runs, []);
 }
@@ -190,7 +235,8 @@ export function saveRunActivities(activities: RunActivity[]): void {
   setItem(KEYS.runs, [...existing, ...newOnes]);
 }
 
-// --- Supplement Logs ---
+// ── Supplement Logs ─────────────────────────────────────────────────
+
 export function getSupplementLogs(): SupplementLog[] {
   return getItem<SupplementLog[]>(KEYS.supplementLogs, []);
 }
@@ -203,7 +249,6 @@ export function toggleSupplement(
   const idx = logs.findIndex(
     (l) => l.supplementId === supplementId && l.date === date
   );
-
   if (idx >= 0) {
     const wasTaken = logs[idx].taken;
     logs[idx] = {
@@ -214,7 +259,6 @@ export function toggleSupplement(
     setItem(KEYS.supplementLogs, logs);
     return !wasTaken;
   }
-
   logs.push({
     date,
     supplementId,
@@ -247,7 +291,7 @@ export function getSupplementStreak(): number {
     if (allTaken) {
       streak++;
     } else {
-      if (i === 0) continue; // today might not be finished
+      if (i === 0) continue;
       break;
     }
   }
