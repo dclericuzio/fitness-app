@@ -321,6 +321,11 @@ export default function GymCalendar() {
 
 // ── Template Picker ─────────────────────────────────────────────────
 
+function formatCategoryTitle(source: string): string {
+  if (source === "my_workouts") return "My Workouts";
+  return source.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function TemplatePicker({
   phase1,
   phase2,
@@ -337,6 +342,16 @@ function TemplatePicker({
   onClose: () => void;
 }) {
   const [preview, setPreview] = useState<WorkoutTemplate | null>(null);
+
+  const customGroups = useMemo(() => {
+    const groups = new Map<string, WorkoutTemplate[]>();
+    custom.forEach((t) => {
+      const key = t.source;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    });
+    return groups;
+  }, [custom]);
 
   if (preview) {
     return (
@@ -357,9 +372,14 @@ function TemplatePicker({
         </button>
       </div>
 
-      {custom.length > 0 && (
-        <TemplateSection title="My Workouts" templates={custom} onTap={setPreview} />
-      )}
+      {Array.from(customGroups.entries()).map(([source, templates]) => (
+        <TemplateSection
+          key={source}
+          title={formatCategoryTitle(source)}
+          templates={templates}
+          onTap={setPreview}
+        />
+      ))}
       <TemplateSection title="Phase 1 -- PPLPPL" templates={phase1} onTap={setPreview} />
       <TemplateSection title="Phase 2 -- PPLRULP" templates={phase2} onTap={setPreview} />
 

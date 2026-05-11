@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Plus, Trash2, X, Save } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import { WorkoutTemplate, Exercise, MuscleGroup, ExerciseCategory } from "@/lib/types";
+import { getCustomTemplates } from "@/lib/store";
 
 const MUSCLE_GROUPS: { value: MuscleGroup; label: string }[] = [
   { value: "push", label: "Push" },
@@ -26,9 +27,23 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
   const [label, setLabel] = useState(initial?.label ?? "");
   const [emoji, setEmoji] = useState(initial?.emoji ?? "💪");
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>(initial?.muscleGroup ?? "push");
-  const [exercises, setExercises] = useState<Exercise[]>(
-    initial?.exercises ?? []
-  );
+  const [exercises, setExercises] = useState<Exercise[]>(initial?.exercises ?? []);
+
+  const isCustomSource = initial?.source && initial.source !== "phase1" && initial.source !== "phase2";
+  const [category, setCategory] = useState(isCustomSource ? initial.source : "my_workouts");
+  const [newCategory, setNewCategory] = useState("");
+  const [showNewCategory, setShowNewCategory] = useState(false);
+
+  const existingCategories = useMemo(() => {
+    const customs = getCustomTemplates();
+    const cats = new Set(customs.map((t) => t.source));
+    cats.add("my_workouts");
+    return Array.from(cats).sort();
+  }, []);
+
+  const categoryLabels: Record<string, string> = {
+    my_workouts: "My Workouts",
+  };
 
   const addExercise = useCallback(() => {
     setExercises((prev) => [
@@ -60,7 +75,13 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
   }, []);
 
   const handleSave = () => {
-    if (!name.trim() || exercises.length === 0) return;
+    if (!name.trim() || exercises.filter((e) => e.name.trim()).length === 0) return;
+
+    let finalCategory = category;
+    if (showNewCategory && newCategory.trim()) {
+      finalCategory = newCategory.trim().toLowerCase().replace(/\s+/g, "_");
+    }
+
     const template: WorkoutTemplate = {
       id: initial?.id ?? `custom_${generateId()}`,
       name: name.trim(),
@@ -68,7 +89,7 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
       emoji,
       muscleGroup,
       exercises: exercises.filter((e) => e.name.trim()),
-      source: "custom",
+      source: finalCategory,
       isBuiltIn: false,
     };
     onSave(template);
@@ -106,6 +127,52 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
             placeholder="e.g. Strength + Hypertrophy"
             className="w-full rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary"
           />
+        </div>
+
+        {/* Category selector */}
+        <div>
+          <label className="mb-1 block text-xs text-muted">Category</label>
+          {showNewCategory ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="e.g. Phase 3, Bulk Program"
+                className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  setShowNewCategory(false);
+                  setNewCategory("");
+                }}
+                className="rounded-lg bg-muted/10 px-3 py-2 text-xs text-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm outline-none"
+              >
+                {existingCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {categoryLabels[cat] ?? cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowNewCategory(true)}
+                className="flex items-center gap-1 rounded-lg border border-dashed border-card-border px-3 py-2 text-xs text-muted transition-colors hover:border-primary hover:text-primary"
+              >
+                <Plus size={12} /> New
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

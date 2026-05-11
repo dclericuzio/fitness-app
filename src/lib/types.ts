@@ -13,7 +13,7 @@ export interface Exercise {
   category: ExerciseCategory;
 }
 
-export type TemplateSource = "phase1" | "phase2" | "custom";
+export type TemplateSource = "phase1" | "phase2" | string;
 
 export interface WorkoutTemplate {
   id: string;
