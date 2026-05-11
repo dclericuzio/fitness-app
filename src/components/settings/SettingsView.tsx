@@ -14,9 +14,6 @@ import {
   Moon,
   Monitor,
   Palette,
-  Database,
-  Check,
-  Loader2,
 } from "lucide-react";
 import { cn, formatTimer } from "@/lib/utils";
 import { getSettings, updateSettings } from "@/lib/store";
@@ -306,7 +303,6 @@ export default function SettingsView() {
       <section className="rounded-xl border border-card-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">Data</h2>
         <div className="space-y-3">
-          <SeedButton />
           <div className="flex gap-3">
             <button
               onClick={handleExport}
@@ -329,39 +325,3 @@ export default function SettingsView() {
   );
 }
 
-function SeedButton() {
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [count, setCount] = useState(0);
-
-  const handleSeed = async () => {
-    setStatus("loading");
-    try {
-      const res = await fetch("/api/seed");
-      const data = await res.json();
-      localStorage.setItem("dc_workout_sessions", JSON.stringify(data.sessions));
-      setCount(data.sessions.length);
-      setStatus("done");
-    } catch {
-      setStatus("error");
-    }
-  };
-
-  return (
-    <button
-      onClick={handleSeed}
-      disabled={status === "loading"}
-      className={cn(
-        "flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all active:bg-muted/20",
-        status === "done" ? "bg-success/20 text-success" : "bg-primary/10 text-primary"
-      )}
-    >
-      {status === "loading" ? (
-        <><Loader2 size={14} className="animate-spin" /> Importing...</>
-      ) : status === "done" ? (
-        <><Check size={14} /> {count} sessions imported</>
-      ) : (
-        <><Database size={14} /> Seed Workout History</>
-      )}
-    </button>
-  );
-}

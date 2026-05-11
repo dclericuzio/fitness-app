@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, TrendingUp, TrendingDown, Minus, History } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Minus, History, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   updateSession,
@@ -80,6 +80,22 @@ export default function ExerciseLogger({
     [workout.exercises, timer, onUpdate]
   );
 
+  const handleMarkAllDone = useCallback(
+    (exIdx: number) => {
+      setSession((prev) => {
+        const allDone = prev.exercises[exIdx].sets.every((s) => s.completed);
+        const updated = { ...prev, exercises: prev.exercises.map((ex, ei) => {
+          if (ei !== exIdx) return ex;
+          return { ...ex, sets: ex.sets.map((s) => ({ ...s, completed: !allDone })) };
+        })};
+        updateSession(updated.id, () => updated);
+        onUpdate(updated);
+        return updated;
+      });
+    },
+    [onUpdate]
+  );
+
   const handleAddSet = useCallback(
     (exIdx: number) => {
       setSession((prev) => {
@@ -128,12 +144,16 @@ export default function ExerciseLogger({
               .filter((s) => s.completed && s.weightKg && s.actualReps)
               .reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.actualReps ?? 0), 0)
           : 0;
+        const allSetsDone = exerciseLog.sets.every((s) => s.completed);
+        const someSetsDone = exerciseLog.sets.some((s) => s.completed);
 
         return (
           <div key={exerciseLog.exerciseId} className="space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold">{exerciseLog.exerciseName}</span>
+                <span className={cn("text-sm font-semibold", allSetsDone && "text-success")}>
+                  {exerciseLog.exerciseName}
+                </span>
                 {template && (
                   <span className="ml-2 text-xs text-muted">
                     {template.sets}x{template.repsMin}-{template.repsMax}
@@ -143,17 +163,29 @@ export default function ExerciseLogger({
                   </span>
                 )}
               </div>
-              {lastVolume > 0 && currentVolume > 0 && (
-                <div className="flex items-center gap-1">
-                  {currentVolume > lastVolume ? (
+              <div className="flex items-center gap-2">
+                {lastVolume > 0 && currentVolume > 0 && (
+                  currentVolume > lastVolume ? (
                     <TrendingUp size={14} className="text-success" />
                   ) : currentVolume < lastVolume ? (
                     <TrendingDown size={14} className="text-danger" />
                   ) : (
                     <Minus size={14} className="text-muted" />
+                  )
+                )}
+                <button
+                  onClick={() => handleMarkAllDone(exIdx)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-all active:scale-95",
+                    allSetsDone
+                      ? "bg-success/20 text-success"
+                      : "bg-muted/10 text-muted"
                   )}
-                </div>
-              )}
+                >
+                  <CheckCheck size={12} />
+                  {allSetsDone ? "Done" : "All"}
+                </button>
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-card-border">
@@ -173,14 +205,18 @@ export default function ExerciseLogger({
                     return (
                       <tr
                         key={set.setNumber}
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).tagName === "INPUT") return;
+                          handleSetComplete(exIdx, setIdx);
+                        }}
                         className={cn(
-                          "border-b border-card-border transition-colors",
+                          "border-b border-card-border transition-colors cursor-pointer active:bg-muted/10",
                           set.completed && "bg-success/5"
                         )}
                       >
                         <td className="py-2 text-center font-mono text-muted">{set.setNumber}</td>
                         <td className="py-2 text-center text-muted">{set.targetRepsMin}-{set.targetRepsMax}</td>
-                        <td className="py-2 text-center">
+                        <td className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -192,7 +228,7 @@ export default function ExerciseLogger({
                             className="w-14 rounded bg-muted/10 px-2 py-1.5 text-center text-sm font-medium text-foreground outline-none focus:ring-1 focus:ring-primary"
                           />
                         </td>
-                        <td className="py-2 text-center">
+                        <td className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="number"
                             inputMode="numeric"
@@ -205,8 +241,7 @@ export default function ExerciseLogger({
                           />
                         </td>
                         <td className="py-2 text-center">
-                          <button
-                            onClick={() => handleSetComplete(exIdx, setIdx)}
+                          <div
                             className={cn(
                               "mx-auto flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all",
                               set.completed ? "border-success bg-success text-white" : "border-muted/30"
@@ -217,7 +252,7 @@ export default function ExerciseLogger({
                                 <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             )}
-                          </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -226,12 +261,14 @@ export default function ExerciseLogger({
               </table>
             </div>
 
-            <button
-              onClick={() => handleAddSet(exIdx)}
-              className="flex items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
-            >
-              <Plus size={12} /> Add Set
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleAddSet(exIdx)}
+                className="flex items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
+              >
+                <Plus size={12} /> Add Set
+              </button>
+            </div>
 
             {lastSession && lastSession.some((s) => s.weightKg !== null) && (
               <div className="flex items-center gap-1.5 text-[10px] text-muted">
