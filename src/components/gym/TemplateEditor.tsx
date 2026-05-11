@@ -131,7 +131,7 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
 
         {/* Category selector */}
         <div>
-          <label className="mb-1 block text-xs text-muted">Category</label>
+          <label className="mb-2 block text-xs text-muted">Category</label>
           {showNewCategory ? (
             <div className="flex gap-2">
               <input
@@ -153,21 +153,24 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
               </button>
             </div>
           ) : (
-            <div className="flex gap-2">
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="flex-1 rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm outline-none"
-              >
-                {existingCategories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {categoryLabels[cat] ?? cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap gap-2">
+              {existingCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                    category === cat
+                      ? "bg-primary/20 text-primary ring-1 ring-primary"
+                      : "bg-muted/10 text-muted"
+                  )}
+                >
+                  {categoryLabels[cat] ?? cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                </button>
+              ))}
               <button
                 onClick={() => setShowNewCategory(true)}
-                className="flex items-center gap-1 rounded-lg border border-dashed border-card-border px-3 py-2 text-xs text-muted transition-colors hover:border-primary hover:text-primary"
+                className="flex items-center gap-1 rounded-lg border border-dashed border-card-border px-3 py-2 text-sm text-muted transition-colors hover:border-primary hover:text-primary"
               >
                 <Plus size={12} /> New
               </button>
@@ -175,35 +178,43 @@ export default function TemplateEditor({ initial, onSave, onCancel }: TemplateEd
           )}
         </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs text-muted">Type</label>
-            <select
-              value={muscleGroup}
-              onChange={(e) => setMuscleGroup(e.target.value as MuscleGroup)}
-              className="w-full rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm outline-none"
-            >
-              {MUSCLE_GROUPS.map((g) => (
-                <option key={g.value} value={g.value}>{g.label}</option>
-              ))}
-            </select>
+        {/* Muscle group */}
+        <div>
+          <label className="mb-2 block text-xs text-muted">Muscle Group</label>
+          <div className="flex flex-wrap gap-2">
+            {MUSCLE_GROUPS.map((g) => (
+              <button
+                key={g.value}
+                onClick={() => setMuscleGroup(g.value)}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                  muscleGroup === g.value
+                    ? "bg-primary/20 text-primary ring-1 ring-primary"
+                    : "bg-muted/10 text-muted"
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted">Emoji</label>
-            <div className="flex flex-wrap gap-1">
-              {EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-lg transition-all",
-                    emoji === e ? "bg-primary/20 ring-1 ring-primary" : "bg-muted/10"
-                  )}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
+        </div>
+
+        {/* Emoji */}
+        <div>
+          <label className="mb-2 block text-xs text-muted">Emoji</label>
+          <div className="flex flex-wrap gap-1.5">
+            {EMOJIS.map((e) => (
+              <button
+                key={e}
+                onClick={() => setEmoji(e)}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-lg text-lg transition-all",
+                  emoji === e ? "bg-primary/20 ring-1 ring-primary" : "bg-muted/10"
+                )}
+              >
+                {e}
+              </button>
+            ))}
           </div>
         </div>
       </div>
