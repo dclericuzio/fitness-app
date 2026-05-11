@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import RestTimerPill from "@/components/RestTimerPill";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import AutoSeed from "@/components/AutoSeed";
 import { TimerProvider } from "@/lib/timer-context";
 import { ThemeProvider } from "@/lib/theme-context";
 
@@ -60,6 +61,7 @@ export default function RootLayout({
         <ThemeProvider>
           <TimerProvider>
             <ServiceWorkerRegistrar />
+            <AutoSeed />
             <main className="mx-auto max-w-lg px-4 pb-24 pt-6">{children}</main>
             <RestTimerPill />
             <BottomNav />
