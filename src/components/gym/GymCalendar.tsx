@@ -195,9 +195,9 @@ export default function GymCalendar() {
             const day = i + 1;
             const dateStr = `${calMonth.year}-${String(calMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const session = calendarData.sessionMap.get(day);
-            const template = session
-              ? getTemplateById(session.workoutTemplateId, customTemplates)
-              : undefined;
+            const hasWorkout = !!session;
+            const isDone = session?.completed ?? false;
+            const isPlanned = hasWorkout && !isDone;
             const isSelected = dateStr === selectedDate;
             const isTodayCell = dateStr === todayStr;
 
@@ -206,25 +206,39 @@ export default function GymCalendar() {
                 key={day}
                 onClick={() => setSelectedDate(dateStr)}
                 className={cn(
-                  "relative flex h-10 flex-col items-center justify-center rounded-lg text-xs transition-all",
-                  isSelected && "bg-primary/20 ring-1 ring-primary font-bold",
-                  isTodayCell && !isSelected && "ring-1 ring-primary/40",
-                  !isSelected && !isTodayCell && "hover:bg-muted/10",
-                  session?.completed && "text-success"
+                  "relative flex h-10 items-center justify-center rounded-lg text-xs transition-all",
+                  isDone && !isSelected && "bg-success/20 text-success font-semibold",
+                  isSelected && "ring-2 ring-primary font-bold",
+                  isSelected && isDone && "bg-success/20 text-success",
+                  isSelected && !isDone && "bg-primary/10",
+                  isTodayCell && !isSelected && "ring-1 ring-primary/50",
+                  !isSelected && !isTodayCell && !isDone && "hover:bg-muted/10"
                 )}
               >
                 <span>{day}</span>
-                {template && (
-                  <div
-                    className={cn(
-                      "mt-0.5 h-1.5 w-1.5 rounded-full",
-                      session?.completed ? "bg-success" : groupColors[template.muscleGroup]
-                    )}
-                  />
+                {isPlanned && (
+                  <div className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-orange" />
                 )}
               </button>
             );
           })}
+        </div>
+        {/* Legend */}
+        <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-muted">
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded bg-success/20" />
+            <span>Done</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex h-3 w-3 items-center justify-center">
+              <div className="h-1.5 w-1.5 rounded-full bg-orange" />
+            </div>
+            <span>Planned</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-3 w-3 rounded ring-1 ring-primary/50" />
+            <span>Today</span>
+          </div>
         </div>
       </div>
 
